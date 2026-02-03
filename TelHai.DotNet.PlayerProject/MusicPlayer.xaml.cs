@@ -132,7 +132,7 @@ namespace TelHai.DotNet.PlayerProject
         {
             if (lstLibrary.SelectedItem is MusicTrack track)
             {
-                mediaPlayer.Open(new Uri(track.FilePath));`
+                mediaPlayer.Open(new Uri(track.FilePath));
                 mediaPlayer.Play();
                 timer.Start();
 
