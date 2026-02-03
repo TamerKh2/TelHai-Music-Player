@@ -1,13 +1,14 @@
 ﻿using Microsoft.Win32;
+using System;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using TelHai.DotNet.PlayerProject;
 using System.Linq;
-using System;
+using TelHai.DotNet.PlayerProject.Views;
+using System.Windows.Media.Imaging;
 
 namespace TelHai.DotNet.PlayerProject
 {
@@ -30,12 +31,16 @@ namespace TelHai.DotNet.PlayerProject
 
             mediaPlayer.Volume = sliderVolume.Value;
             LoadLibrary();
+
+            UpdateArtworkPreview(null); // start empty
         }
 
         private void MusicPlayer_Loaded(object sender, RoutedEventArgs e)
         {
             LoadLibrary();
         }
+
+        /* -------------------- PLAYER CONTROLS -------------------- */
 
         private void BtnPlay_Click(object sender, RoutedEventArgs e)
         {
@@ -85,6 +90,8 @@ namespace TelHai.DotNet.PlayerProject
             }
         }
 
+        /* -------------------- LIBRARY CRUD -------------------- */
+
         private void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog ofd = new OpenFileDialog();
@@ -126,6 +133,21 @@ namespace TelHai.DotNet.PlayerProject
                 library.Remove(track);
                 UpdateLibraryUI();
                 SaveLibrary();
+                UpdateArtworkPreview(null);
+            }
+        }
+
+        private void LstLibrary_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (lstLibrary.SelectedItem is MusicTrack track)
+            {
+                txtCurrentSong.Text = $"{track.Artist} - {track.Title} ({track.Duration:F1} min)";
+                UpdateArtworkPreview(track);
+            }
+            else
+            {
+                txtCurrentSong.Text = "No Song Selected";
+                UpdateArtworkPreview(null);
             }
         }
 
@@ -184,6 +206,7 @@ namespace TelHai.DotNet.PlayerProject
             UpdateLibraryUI();
             SaveLibrary();
             txtStatus.Text = "Loaded 50 Random Songs";
+            UpdateArtworkPreview(null);
         }
 
         private void BtnAddManual_Click(object sender, RoutedEventArgs e)
@@ -205,6 +228,95 @@ namespace TelHai.DotNet.PlayerProject
                 UpdateLibraryUI();
                 SaveLibrary();
                 txtStatus.Text = "Manual Song Added";
+            }
+        }
+
+        private void BtnClearAll_Click(object sender, RoutedEventArgs e)
+        {
+            if (MessageBox.Show("Delete ALL songs?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            {
+                library.Clear();
+                UpdateLibraryUI();
+                SaveLibrary();
+                txtStatus.Text = "Library cleared";
+                txtCurrentSong.Text = "No Song Selected";
+                UpdateArtworkPreview(null);
+            }
+        }
+
+        /* -------------------- MVVM WINDOW INTEGRATION -------------------- */
+
+        private void BtnSongDetails_Click(object sender, RoutedEventArgs e)
+        {
+            if (lstLibrary.SelectedItem is not MusicTrack track)
+            {
+                MessageBox.Show("Please select a song first.");
+                return;
+            }
+
+            SongDetailsWindow win = new SongDetailsWindow(track);
+            win.Owner = this;
+            win.ShowDialog();
+
+            UpdateLibraryUI();
+            SaveLibrary();
+            txtStatus.Text = "Song details updated";
+
+            // Update artwork immediately after edits
+            UpdateArtworkPreview(track);
+        }
+
+        /* -------------------- ARTWORK PREVIEW (NO API HERE) -------------------- */
+
+        private void UpdateArtworkPreview(MusicTrack? track)
+        {
+            // Clear
+            imgArtwork.Source = null;
+
+            if (track == null)
+                return;
+
+            // Prefer ArtworkUrl if exists (from MVVM window)
+            if (!string.IsNullOrWhiteSpace(track.ArtworkUrl))
+            {
+                try
+                {
+                    BitmapImage bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.UriSource = new Uri(track.ArtworkUrl, UriKind.Absolute);
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    imgArtwork.Source = bmp;
+                    return;
+                }
+                catch
+                {
+                    // ignore if URL fails
+                }
+            }
+
+            // If no ArtworkUrl, try first local image in Images list
+            if (track.Images != null && track.Images.Count > 0)
+            {
+                string path = track.Images[0];
+                if (File.Exists(path))
+                {
+                    try
+                    {
+                        BitmapImage bmp = new BitmapImage();
+                        bmp.BeginInit();
+                        bmp.UriSource = new Uri(path, UriKind.Absolute);
+                        bmp.CacheOption = BitmapCacheOption.OnLoad;
+                        bmp.EndInit();
+                        bmp.Freeze();
+                        imgArtwork.Source = bmp;
+                    }
+                    catch
+                    {
+                        imgArtwork.Source = null;
+                    }
+                }
             }
         }
 
@@ -239,8 +351,8 @@ namespace TelHai.DotNet.PlayerProject
             }
 
             var filtered = library.Where(s =>
-                s.Title.ToLower().Contains(query) ||
-                s.Artist.ToLower().Contains(query)
+                (s.Title ?? "").ToLower().Contains(query) ||
+                (s.Artist ?? "").ToLower().Contains(query)
             ).ToList();
 
             lstLibrary.ItemsSource = filtered;
@@ -279,19 +391,6 @@ namespace TelHai.DotNet.PlayerProject
                 .ToList();
 
             MessageBox.Show(string.Join("\n", groups), "Grouped by Artist");
-        }
-
-        // This method is not required but i added it bc it seems suitable here
-        private void BtnClearAll_Click(object sender, RoutedEventArgs e)
-        {
-            if (MessageBox.Show("Delete ALL songs?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
-            {
-                library.Clear();
-                UpdateLibraryUI();
-                SaveLibrary();
-                txtStatus.Text = "Library cleared";
-                txtCurrentSong.Text = "No Song Selected";
-            }
         }
     }
 }
