@@ -7,6 +7,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using TelHai.DotNet.PlayerProject;
 using System.Linq;
+using System;
 
 namespace TelHai.DotNet.PlayerProject
 {
@@ -153,7 +154,6 @@ namespace TelHai.DotNet.PlayerProject
             txtStatus.Text = "Playing";
         }
 
-
         private void SaveLibrary()
         {
             string json = JsonSerializer.Serialize(library);
@@ -182,6 +182,7 @@ namespace TelHai.DotNet.PlayerProject
             library = service.GenerateSongs(50);
 
             UpdateLibraryUI();
+            SaveLibrary();
             txtStatus.Text = "Loaded 50 Random Songs";
         }
 
@@ -202,11 +203,10 @@ namespace TelHai.DotNet.PlayerProject
 
                 library.Add(newSong);
                 UpdateLibraryUI();
+                SaveLibrary();
                 txtStatus.Text = "Manual Song Added";
             }
         }
-
-
 
         /* -------------------- LINQ FEATURES -------------------- */
 
@@ -280,7 +280,8 @@ namespace TelHai.DotNet.PlayerProject
 
             MessageBox.Show(string.Join("\n", groups), "Grouped by Artist");
         }
-        //This method is not required but i added it bc it seems suitable here
+
+        // This method is not required but i added it bc it seems suitable here
         private void BtnClearAll_Click(object sender, RoutedEventArgs e)
         {
             if (MessageBox.Show("Delete ALL songs?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
@@ -292,6 +293,5 @@ namespace TelHai.DotNet.PlayerProject
                 txtCurrentSong.Text = "No Song Selected";
             }
         }
-
     }
 }
