@@ -130,16 +130,29 @@ namespace TelHai.DotNet.PlayerProject
 
         private void LstLibrary_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            if (lstLibrary.SelectedItem is MusicTrack track)
-            {
-                mediaPlayer.Open(new Uri(track.FilePath));
-                mediaPlayer.Play();
-                timer.Start();
+            if (lstLibrary.SelectedItem is not MusicTrack track)
+                return;
 
-                txtCurrentSong.Text = $"{track.Artist} - {track.Title} ({track.Duration:F1} min)";
-                txtStatus.Text = "Playing";
+            if (string.IsNullOrWhiteSpace(track.FilePath))
+            {
+                MessageBox.Show("This song has no MP3 file attached (manual/random song).");
+                return;
             }
+
+            if (!File.Exists(track.FilePath))
+            {
+                MessageBox.Show("The MP3 file was not found on this computer.");
+                return;
+            }
+
+            mediaPlayer.Open(new Uri(track.FilePath));
+            mediaPlayer.Play();
+            timer.Start();
+
+            txtCurrentSong.Text = $"{track.Artist} - {track.Title} ({track.Duration:F1} min)";
+            txtStatus.Text = "Playing";
         }
+
 
         private void SaveLibrary()
         {
